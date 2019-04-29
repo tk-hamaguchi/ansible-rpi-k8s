@@ -1,0 +1,16 @@
+[raspberrypis]
+rpi-k8s-master-01
+rpi-k8s-worker-01
+rpi-k8s-worker-02
+
+[k8s-nodes]
+rpi-k8s-master-01
+rpi-k8s-worker-01
+rpi-k8s-worker-02
+
+[k8s-masters]
+rpi-k8s-master-01
+
+[k8s-workers]
+rpi-k8s-worker-01
+rpi-k8s-worker-02

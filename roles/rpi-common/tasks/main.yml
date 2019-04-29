@@ -1,0 +1,8 @@
+- include: sshd.yml
+- include: serial-port.yml
+- include: package-update.yml
+- include: swap.yml
+- include: rootfs.yml
+- name: 設定を反映するために再起動
+  reboot:
+    reboot_timeout: 3600

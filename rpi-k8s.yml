@@ -1,0 +1,11 @@
+- hosts: raspberrypis
+  become: yes
+  roles:
+    - rpi-common
+
+- hosts: k8s-nodes
+  become: yes
+  roles:
+    - common
+    - docker
+    - kubernetes-base

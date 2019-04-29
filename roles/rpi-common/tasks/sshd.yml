@@ -1,0 +1,5 @@
+- name: 起動時にsshdを起動する
+  systemd:
+    name: ssh
+    state: started
+    enabled: yes

@@ -1,0 +1,19 @@
+- name: GoogleのGPG鍵を追加する
+  apt_key:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+
+- name: Kubernetesのリポジトリを追加する
+  apt_repository:
+    repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+
+
+- name: kubernetesをインストールする
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - kubelet
+    - kubeadm
+    - kubectl
+
