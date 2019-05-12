@@ -1,0 +1,61 @@
+- name: Cluster設定情報作成スクリプトを作成する
+  template:
+    src: create_etcd_cluster_config.sh.j2
+    dest: /root/create_etcd_cluster_config.sh
+
+- name: Cluster設定情報作成スクリプトを実行する
+  shell: bash /root/create_etcd_cluster_config.sh
+
+- name: ca.keyの存在確認を行う
+  stat:
+    path: /etc/kubernetes/pki/etcd/ca.key
+  register: ca_key
+
+- name: Etcdの証明書を作成する
+  shell: kubeadm init phase certs etcd-ca
+  when: not ca_key.stat.exists
+
+- name: 証明書作成スクリプトを作成する
+  template:
+    src: create_etcd_cluster_certs.sh.j2
+    dest: /root/create_etcd_cluster_certs.sh
+
+- name: 証明書作成スクリプトを実行する
+  shell: bash /root/create_etcd_cluster_certs.sh
+
+- name: Etcdを立ち上げる
+  shell: kubeadm init phase etcd local --config=/tmp/etcd_configs/{{ ansible_default_ipv4["address"] }}/kubeadmcfg.yaml
+
+- name: セカンダリ用の証明書を圧縮する
+  archive:
+    path: /tmp/etcd_configs
+    dest: /tmp/etcd_configs.tgz
+
+- name: セカンダリ用の証明書を取得する
+  fetch:
+    src: /tmp/etcd_configs.tgz
+    dest: tmp/etcd_configs.tgz
+    flat: yes
+
+- name: Kubernetesのマスター用証明書をまとめるディレクトリを作成する
+  file:
+    path: /root/k8s_certs/etcd
+    state: directory
+
+- name: Kubernetesのマスター用にAPIサーバーの証明書類をコピーする
+  shell: 'cp /etc/kubernetes/pki/apiserver-etcd-client.crt /etc/kubernetes/pki/apiserver-etcd-client.key /root/k8s_certs/'
+
+- name: Kubernetesのマスター用にEtcdのCA証明書をコピーする
+  shell: 'cp /etc/kubernetes/pki/etcd/ca.crt /root/k8s_certs/etcd/'
+
+- name: Kubernetesのマスター用証明書を圧縮する
+  archive:
+    path: /root/k8s_certs
+    dest: /root/k8s_certs.tgz
+
+- name: Kubernetesのマスター用の証明書を取得する
+  fetch:
+    src: /root/k8s_certs.tgz
+    dest: tmp/k8s_certs.tgz
+    flat: yes
+

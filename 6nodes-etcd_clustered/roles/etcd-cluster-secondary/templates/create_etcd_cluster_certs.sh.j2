@@ -1,0 +1,22 @@
+#!/bin/bash
+
+mkdir -p /tmp/etcd_configs
+
+{% for host in groups['k8s-etcd-secondaries'] %}
+{% set config_dir = '/tmp/etcd_configs/' + hostvars[host]['ansible_default_ipv4']['address'] %} 
+kubeadm init phase certs etcd-server             --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-peer               --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-healthcheck-client --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs apiserver-etcd-client   --config={{ config_dir }}/kubeadmcfg.yaml
+
+cp -R /etc/kubernetes/pki /tmp/etcd_configs/{{ config_dir }}/
+find /etc/kubernetes/pki -not -name ca.crt -not -name ca.key -type f -delete
+find {{ config_dir }} -name ca.key -type f -delete
+
+{% endfor %}
+{% set config_dir = '/tmp/etcd_configs/' + ansible_default_ipv4["address"] %} 
+kubeadm init phase certs etcd-server             --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-peer               --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs etcd-healthcheck-client --config={{ config_dir }}/kubeadmcfg.yaml
+kubeadm init phase certs apiserver-etcd-client   --config={{ config_dir }}/kubeadmcfg.yaml
+

@@ -1,0 +1,22 @@
+- name: セカンダリ用の証明書をコピーする
+  copy:
+    src: tmp/etcd_configs.tgz
+    dest: /tmp/etcd_configs.tgz
+
+- name: セカンダリ用の証明書を解凍する
+  unarchive:
+    src: /tmp/etcd_configs.tgz
+    dest: /tmp/
+    remote_src: yes
+
+- name: コピーしたセカンダリ用の証明書を削除する
+  file:
+    path: /tmp/etcd_configs.tgz
+    state: absent
+
+- name: 解凍した証明書をコピーする
+  shell: rsync -avz /tmp/etcd_configs/{{ ansible_default_ipv4["address"] }}/pki /etc/kubernetes
+
+- name: Etcdを立ち上げる
+  shell: kubeadm init phase etcd local --config=/tmp/etcd_configs/{{ ansible_default_ipv4["address"] }}/kubeadmcfg.yaml
+

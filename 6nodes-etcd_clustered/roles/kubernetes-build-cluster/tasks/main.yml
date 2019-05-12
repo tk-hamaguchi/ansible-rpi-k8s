@@ -1,0 +1,6 @@
+- name: labelにnode-role.kubernetes.io/worker=workerを付与する
+  shell: "kubectl label node {{ item }} node-role.kubernetes.io/worker=worker"
+  with_items:
+    - "{{ groups['k8s-workers'] }}"
+
+

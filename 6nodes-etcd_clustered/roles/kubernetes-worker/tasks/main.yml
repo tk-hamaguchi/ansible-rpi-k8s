@@ -1,0 +1,16 @@
+- name: Worker用のkubeadm joinコマンドをアップロードする
+  copy:
+    src: tmp/kubeadm_join_worker.sh
+    dest: /root/kubeadm_join_worker.sh
+    mode: 700
+
+- name: ca.crt の存在確認を行う
+  stat:
+    path: /etc/kubernetes/pki/ca.crt
+  register: ca_crt
+
+- name: kubeadmをinitする
+  shell: /root/kubeadm_join_worker.sh
+  register: kubeadm_join_output
+  when: not ca_crt.stat.exists
+

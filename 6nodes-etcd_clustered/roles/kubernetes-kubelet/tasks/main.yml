@@ -1,0 +1,12 @@
+- name: systemd にkubeletを登録する
+  copy:
+    src:  20-etcd-service-manager.conf
+    dest: /etc/systemd/system/kubelet.service.d/20-etcd-service-manager.conf
+
+- name: kubelet を開始する
+  systemd:
+    daemon_reload: yes
+    name: kubelet
+    state: started
+    enabled: yes
+

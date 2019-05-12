@@ -1,0 +1,15 @@
+- name: dhcpcdに固定IPが設定されているか確認する
+  shell: grep -i '^interface' /etc/dhcpcd.conf
+  register: grep_dhcpcd_configured
+  changed_when: false
+  failed_when: grep_dhcpcd_configured.rc not in [0, 1]
+
+- name:
+  blockinfile:
+    path: /etc/dhcpcd.conf
+    block: |
+      profile static_eth0
+      static ip_address={{ ansible_default_ipv4["address"] }}/{{ ansible_default_ipv4["netmask"] }}
+      static routers={{ ansible_default_ipv4["gateway"] }}
+      static domain_name_servers=8.8.8.8
+  when: grep_dhcpcd_configured.rc == 1

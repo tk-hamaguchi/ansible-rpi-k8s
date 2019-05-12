@@ -1,0 +1,2 @@
+- name: root領域を拡張
+  shell: 'raspi-config --expand-rootfs'

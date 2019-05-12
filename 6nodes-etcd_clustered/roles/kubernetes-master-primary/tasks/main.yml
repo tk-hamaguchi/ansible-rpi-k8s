@@ -1,0 +1,102 @@
+- name: Kubernetes クラスタ設定ファイルをアップロードする
+  template:
+    src: kubeadm-config.yaml.j2
+    dest: /root/kubeadm-config.yaml
+
+- name: Kubernetesのマスター用の証明書をコピーする
+  copy:
+    src: tmp/k8s_certs.tgz
+    dest: /tmp/k8s_certs.tgz
+
+- name: Kubernetesのマスター用の証明書を解凍する
+  unarchive:
+    src: /tmp/k8s_certs.tgz
+    dest: /tmp/
+    remote_src: yes
+
+- name: コピーしたKubernetesのマスター用の証明書を削除する
+  file:
+    path: /tmp/k8s_certs.tgz
+    state: absent
+
+- name: admin.conf の存在確認を行う
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: admin_conf
+
+- name: /etc/kubernetes/pki/etcd/ca.crt の存在確認を行う
+  stat:
+    path: /etc/kubernetes/pki/etcd/ca.crt
+  register: etcd_ca_crt
+
+- name: Kubernetesのマスター用証明書ディレクトリを作成する
+  file:
+    path: /etc/kubernetes/pki/etcd
+    state: directory
+
+- name: Etcd用のCA証明書をインストールする
+  shell: 'cp /tmp/k8s_certs/etcd/ca.crt /etc/kubernetes/pki/etcd/'
+  when: not etcd_ca_crt.stat.exists
+
+- name: Etcd用のAPIサーバー用証明書類をインストールする
+  shell: 'cp /tmp/k8s_certs/apiserver-etcd-client.crt /tmp/k8s_certs/apiserver-etcd-client.key /etc/kubernetes/pki/'
+  when: not etcd_ca_crt.stat.exists
+
+- name: kubeadmをinitする
+  shell: "kubeadm init --config /root/kubeadm-config.yaml --experimental-upload-certs"
+  register: kubeadm_init_output
+  when: not admin_conf.stat.exists
+
+- name: Kubernetesの接続設定情報を保存するディレクトリを作成する
+  file:
+    path: "~{{ ansible_user }}/.kube"
+    state: directory
+
+- name: Kubernetesの接続設定情報を保存する
+  shell: "cp -f -i /etc/kubernetes/admin.conf ~{{ ansible_user }}/.kube/config"
+
+- name: Kubernetesの接続設定情報に対するパーミッションを修正する
+  shell: "chown $(id -u {{ ansible_user }}):$(id -g {{ ansible_user }}) ~{{ ansible_user }}/.kube/config"
+
+- name: Kubernetesの接続設定情報を保存するディレクトリを作成する
+  file:
+    path: "$HOME/.kube"
+    state: directory
+
+- name: Kubernetesの接続設定情報を保存する
+  shell: "cp -f -i /etc/kubernetes/admin.conf $HOME/.kube/config"
+
+- name: Kubernetesの接続設定情報に対するパーミッションを修正する
+  shell: "chown $(id -u):$(id -g) $HOME/.kube/config"
+
+- name: コンテナ間接続ネットワークを作成する
+  shell: "kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/{{ commit_hash }}/Documentation/kube-flannel.yml"
+  vars:
+    commit_hash: "a70459be0084506e4ec919aa1c114638878db11b"
+
+- name: kubeadm init の結果から kubeadm joinを抽出
+  set_fact:
+    kubeadm_join_cmds: "{{ kubeadm_init_output.stdout | regex_replace('\\\n', '\t') | regex_replace('\\s*\\\\\t\\s*', ' ') | regex_replace('\\\t\\\t', '\n') | regex_replace('\\s*\\\n\\s*', '\n') | regex_findall('kubeadm join .*') }}"
+
+- name: Master用のkube joinコマンドをファイルに書き出す
+  copy:
+    content: "{{ kubeadm_join_cmds[0] }}"
+    dest: /root/kubeadm_join_master.sh
+
+- name: Worker用のkube joinコマンドをファイルに書き出す
+  copy:
+    content: "{{ kubeadm_join_cmds[1] }}"
+    dest: /root/kubeadm_join_worker.sh
+
+- name: Master用のkubeadm joinコマンドを取得する
+  fetch:
+    src: /root/kubeadm_join_master.sh
+    dest: tmp/kubeadm_join_master.sh
+    flat: yes
+
+- name: Worker用のkubeadm joinコマンドを取得する
+  fetch:
+    src: /root/kubeadm_join_worker.sh
+    dest: tmp/kubeadm_join_worker.sh
+    flat: yes
+

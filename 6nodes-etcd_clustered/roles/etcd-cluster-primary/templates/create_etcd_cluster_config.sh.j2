@@ -1,0 +1,43 @@
+#!/bin/bash
+
+mkdir -p /tmp/etcd_configs
+
+{% for host in groups['k8s-etcd-primary'] %}
+export HOST{{ loop.index0 }}={{ hostvars[host]['ansible_default_ipv4']['address'] }}
+{% endfor %}
+{% for host in groups['k8s-etcd-secondaries'] %}
+export HOST{{ loop.index }}={{ hostvars[host]['ansible_default_ipv4']['address'] }}
+{% endfor %}
+
+ETCDHOSTS=(${HOST0} ${HOST1} ${HOST2})
+
+{% for host in groups['k8s-etcd-primary'] %}
+NAMES[{{ loop.index0 }}]={{ hostvars[host]['ansible_hostname'] }}
+{% endfor %}
+{% for host in groups['k8s-etcd-secondaries'] %}
+NAMES[{{ loop.index }}]={{ hostvars[host]['ansible_hostname'] }}
+{% endfor %}
+
+for i in "${!ETCDHOSTS[@]}"; do
+HOST=${ETCDHOSTS[$i]}
+NAME=${NAMES[$i]}
+mkdir -p /tmp/etcd_configs/${HOST}
+cat << EOF > /tmp/etcd_configs/${HOST}/kubeadmcfg.yaml
+apiVersion: "kubeadm.k8s.io/v1beta1"
+kind: ClusterConfiguration
+etcd:
+  local:
+    serverCertSANs:
+    - "${HOST}"
+    peerCertSANs:
+    - "${HOST}"
+    extraArgs:
+      initial-cluster: ${NAMES[0]}=https://${ETCDHOSTS[0]}:2380,${NAMES[1]}=https://${ETCDHOSTS[1]}:2380,${NAMES[2]}=https://${ETCDHOSTS[2]}:2380
+      initial-cluster-state: new
+      name: ${NAME}
+      listen-peer-urls: https://${HOST}:2380
+      listen-client-urls: https://${HOST}:2379
+      advertise-client-urls: https://${HOST}:2379
+      initial-advertise-peer-urls: https://${HOST}:2380
+EOF
+done

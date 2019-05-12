@@ -1,0 +1,34 @@
+- name: SSH用の公開鍵を設定する
+  authorized_key:
+    user: pi
+    state: present
+    key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+- name: PubkeyAuthentication を設定する
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(PubkeyAuthentication)\s.*$'
+    replace: '\1 yes'
+
+- name: AuthorizedKeysFile を設定する
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(AuthorizedKeysFile\s.*)$'
+    replace: '\1'
+
+- name: PasswordAuthentication を設定する
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(PasswordAuthentication)\s.*$'
+    replace: '\1 no'
+
+- name: sshサービスを再起動する
+  systemd:
+    state: restarted
+    name: ssh
+
+- name: 起動時にsshdを起動する
+  systemd:
+    name: ssh
+    state: started
+    enabled: yes

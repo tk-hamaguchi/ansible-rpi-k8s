@@ -1,0 +1,46 @@
+- hosts: raspberrypis
+  become: yes
+  roles:
+    - rpi-common
+
+- hosts:
+    - k8s-nodes
+    - k8s-etcd-primary
+    - k8s-etcd-secondaries
+  become: yes
+  roles:
+    - common
+    - docker
+    - kubernetes-base
+
+- hosts:
+    - k8s-etcd-primary
+    - k8s-etcd-secondaries
+  become: yes
+  roles:
+    - kubernetes-kubelet
+
+- hosts: k8s-etcd-primary
+  become: yes
+  roles:
+    - etcd-cluster-primary
+
+- hosts: k8s-etcd-secondaries
+  become: yes
+  roles:
+    - etcd-cluster-secondary
+
+- hosts: k8s-master-primary
+  become: yes
+  roles:
+    - kubernetes-master-primary
+
+- hosts: k8s-workers
+  become: yes
+  roles:
+    - kubernetes-worker
+
+- hosts: k8s-master-primary
+  become: yes
+  roles:
+    - kubernetes-build-cluster
