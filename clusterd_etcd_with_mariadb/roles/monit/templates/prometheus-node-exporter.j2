@@ -1,0 +1,14 @@
+check file prometheus_node_exporter_bin with path /usr/bin/prometheus-node-exporter
+    group node-exporter
+
+check process prometheus-node-exporter matching "/usr/bin/prometheus-node-exporter"
+    group node-exporter
+    start program = "/bin/systemctl start prometheus-node-exporter.service"
+    stop  program = "/bin/systemctl stop prometheus-node-exporter.service"
+    if 5 restarts within 5 cycles then alert
+    if failed port 9100 type tcp within 5 cycles then alert
+    if failed port 9100 protocol http request "/metrics" then alert
+    depend prometheus_node_exporter_bin
+
+check host "{{ nodeHostName }}:9100" address {{ nodeIpAddress }}
+    if failed port 9100 protocol http then alert

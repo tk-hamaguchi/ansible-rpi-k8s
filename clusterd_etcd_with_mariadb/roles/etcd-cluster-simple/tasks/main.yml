@@ -1,0 +1,4 @@
+- include: install.yml
+- include: configuratiom.yml
+- include: enable.yml
+- include: monit.yml

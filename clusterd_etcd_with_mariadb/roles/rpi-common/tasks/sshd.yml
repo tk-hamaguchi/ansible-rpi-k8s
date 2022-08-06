@@ -1,0 +1,55 @@
+- name: Set ssh public key to authorized_keys
+  authorized_key:
+    user: pi
+    state: present
+    key: "{{ lookup('file', authorized_keys_file) }}"
+
+- name: Create temp file for config
+  copy:
+    src:  /etc/ssh/sshd_config
+    dest: /tmp/sshd_config.tmp
+    remote_src: yes
+  changed_when: false
+
+- name: Set PubkeyAuthentication to yes
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(PubkeyAuthentication)\s.*$'
+    replace: '\1 yes'
+
+- name: Set AuthorizedKeysFile to 1
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(AuthorizedKeysFile\s.*)$'
+    replace: '\1'
+
+- name: Set PasswordAuthentication to no
+  replace:
+    path: /etc/ssh/sshd_config
+    regexp: '^#(PasswordAuthentication)\s.*$'
+    replace: '\1 no'
+
+- name: Check diff for /etc/ssh/sshd_config
+  shell: diff /etc/ssh/sshd_config /tmp/sshd_config.tmp
+  register: sshd_config_diff
+  failed_when: ( sshd_config_diff.rc not in [ 0, 1 ] ) 
+  changed_when: false
+
+- name: Restart sshd service
+  systemd:
+    state: restarted
+    name: ssh
+  when: sshd_config_diff.rc == 1
+
+- name:  Start and enable sshd service
+  systemd:
+    name: ssh
+    state: started
+    enabled: yes
+
+- name: Remove temp file
+  file:
+    path: /tmp/sshd_config.tmp
+    state: absent
+    force: yes
+  changed_when: false

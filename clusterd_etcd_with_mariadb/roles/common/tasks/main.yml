@@ -1,0 +1,4 @@
+- include: timezone.yml
+- include: hostname.yml
+- include: network.yml
+- include: packages.yml

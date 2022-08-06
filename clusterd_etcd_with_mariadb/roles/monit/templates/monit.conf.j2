@@ -1,0 +1,10 @@
+set mailserver localhost
+
+set mail-format { from: monit@{{ nodeHostName }}.local }
+
+set alert alert@localhost
+
+set httpd port 2812 and
+    use address {{ nodeIpAddress }}  # only accept connection from localhost (drop if you use M/Monit)
+    allow {{ ipAddress }}
+    allow localhost        # allow localhost to connect to the server and

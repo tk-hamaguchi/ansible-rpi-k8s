@@ -1,0 +1,53 @@
+- name: monitの実行ファイルチェック
+  stat:
+    path: /usr/bin/monit
+  register: monit_bin
+
+- name: monitの設定フォルダチェック
+  stat:
+    path: /etc/monit/conf-available/
+  register: monit_conf_available
+
+- name: monitの設定ファイル作成
+  copy:
+    dest: /etc/monit/conf-available/etcd
+    content: |
+      check directory etcd_data with path /var/lib/etcd
+          group etcd
+          if failed uid etcd then unmonitor
+          if failed gid etcd then unmonitor
+
+      check file etcd_bin with path /usr/local/bin/etcd
+          group etcd
+
+      check file etcdctl_bin with path /usr/local/bin/etcdctl
+          group etcd
+
+      check process etcd matching "/usr/local/bin/etcd"
+          group etcd
+          start program = "/bin/systemctl start etcd.service"
+          stop  program = "/bin/systemctl stop etcd.service"
+          if 5 restarts within 5 cycles then unmonitor
+          if failed host {{ nodeIpAddress }} port 2380 type tcp within 5 cycles then unmonitor
+          if failed host {{ nodeIpAddress }} port 2379 type tcp within 5 cycles then unmonitor
+          if failed host {{ nodeIpAddress }} port 2379 protocol http request "/metrics" then unmonitor
+          depend etcd_data
+          depend etcd_bin
+          depend etcdctl_bin
+
+      check program etcdctl with path "/usr/local/bin/etcdctl --endpoints http://{{ nodeIpAddress }}:2379 endpoint health"
+          group etcd
+          if status != 0 then unmonitor
+          depend etcd
+
+  when: monit_conf_available.stat.exists
+
+- name: Create symbolic link
+  file: 
+    src:  /etc/monit/conf-available/etcd
+    dest: /etc/monit/conf-enabled/etcd
+    state: link
+
+- name: monitをリロードする
+  shell: /usr/bin/monit reload
+  when: monitEnabled is defined and monitEnabled == true and monit_bin.stat.exists and etcd_conf_diff.rc != 0

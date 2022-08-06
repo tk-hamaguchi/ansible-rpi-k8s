@@ -1,0 +1,9 @@
+- name: Check hostname
+  shell: hostname
+  changed_when: false
+  register: hostname
+
+- name: Set hostname
+  hostname: 
+    name: "{{ nodeHostName }}"
+  when: hostname.stdout != nodeHostName

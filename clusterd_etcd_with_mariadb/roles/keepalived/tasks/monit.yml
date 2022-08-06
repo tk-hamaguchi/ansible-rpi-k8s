@@ -1,0 +1,44 @@
+- name: monitの実行ファイルチェック
+  stat:
+    path: /usr/bin/monit
+  register: monit_bin
+
+- name: monitの設定フォルダチェック
+  stat:
+    path: /etc/monit/conf-available/
+  register: monit_conf_available
+
+- name: monitの設定ファイル作成
+  copy:
+    dest: /etc/monit/conf-available/keepalived
+    content: |
+      # CREATE USER 'keepalived'@'{{ nodeIpAddress }}';
+      # FLUSH PRIVILEGES;
+      
+      check file keepalived_conf with path /etc/keepalived/keepalived.conf
+          group keepalived
+
+      check file keepalived_mysqlchk with path /etc/keepalived/mysqlchk.sh
+          group keepalived
+          if failed uid "keepalived_script" then alert
+          if failed gid "keepalived_script" then alert
+
+      check process keepalived with pidfile /var/run/keepalived.pid
+          group keepalived
+          start program = "/bin/systemctl start keepalived.service"
+          stop  program = "/bin/systemctl stop keepalived.service"
+          if 5 restarts within 5 cycles then timeout
+          depend keepalived_conf
+          depend keepalived_mysqlchk
+
+  when: monit_conf_available.stat.exists
+
+- name: Create symbolic link
+  file: 
+    src:  /etc/monit/conf-available/keepalived
+    dest: /etc/monit/conf-enabled/keepalived
+    state: link
+
+- name: monitをリロードする
+  shell: /usr/bin/monit reload
+  when: monitEnabled is defined and monitEnabled == true and monit_bin.stat.exists

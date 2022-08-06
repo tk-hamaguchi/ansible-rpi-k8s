@@ -1,0 +1,44 @@
+- name: monitの実行ファイルチェック
+  stat:
+    path: /usr/bin/monit
+  register: monit_bin
+
+- name: monitの設定フォルダチェック
+  stat:
+    path: /etc/monit/conf-available/
+  register: monit_conf_available
+
+- name: monitの設定ファイル作成
+  copy:
+    dest: /etc/monit/conf-available/mariadb
+    content: |
+      # CREATE USER 'monit'@'{{ nodeIpAddress }}';
+      # FLUSH PRIVILEGES;
+      
+      check file mariadb_bin with path /usr/sbin/mariadbd
+          group mariadb
+          include /etc/monit/templates/rootbin
+          
+      check process mariadb with pidfile /var/run/mysqld/mysqld.pid
+          group mariadb
+          start program = "/bin/systemctl start mariadb.service"
+          stop  program = "/bin/systemctl stop mariadb.service"
+          if 5 restarts within 5 cycles then timeout
+          if failed host {{ nodeIpAddress }} port 3306 protocol mysql username "monit" then alert
+          if failed unixsocket /var/run/mysqld/mysqld.sock protocol mysql username "monit" then alert
+          depend mariadb_bin
+
+      check host "{{ nodeHostName }}:3306" address {{ nodeIpAddress }}
+          if failed port 3306 protocol mysql username "monit" then alert
+
+  when: monit_conf_available.stat.exists
+
+- name: Create symbolic link
+  file: 
+    src:  /etc/monit/conf-available/mariadb
+    dest: /etc/monit/conf-enabled/mariadb
+    state: link
+
+- name: monitをリロードする
+  shell: /usr/bin/monit reload
+  when: monitEnabled is defined and monitEnabled == true and monit_bin.stat.exists

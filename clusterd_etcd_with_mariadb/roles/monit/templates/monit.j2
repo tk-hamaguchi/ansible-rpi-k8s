@@ -1,0 +1,2 @@
+check host "{{ nodeHostName }}:2812" address {{ nodeIpAddress }}
+    if failed port 2812 protocol http then alert

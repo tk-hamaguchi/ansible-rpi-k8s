@@ -1,0 +1,67 @@
+from io import StringIO
+import logging
+import logging.handlers
+import sys
+from email.parser import BytesParser, Parser
+from email.policy import default
+import urllib.request, urllib.parse
+from urllib.parse import urlparse
+import json
+
+
+SLACK_INCOMING_WEBHOOK_URL: str = "{{ slackIncomingWebhookUrl }}"
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[
+        logging.StreamHandler(),
+        logging.handlers.SysLogHandler(
+            address="/dev/log",
+            facility=logging.handlers.SysLogHandler.LOG_LOCAL7
+        )
+    ]
+)
+
+logger = logging.getLogger(__file__)
+
+io: StringIO = StringIO()
+
+for line in sys.stdin:
+    logger.debug(line)
+    io.write(line)
+
+mail = Parser(policy=default).parsestr(io.getvalue())
+
+subject = mail['subject']
+body    = mail.get_payload()
+
+logger.debug('---------------------------------------------------------')
+logger.debug(subject)
+logger.debug('- - - - - - - - - - - - - - - - - - - - - - - - - - - - -')
+for single_line in body.strip().split('\n'):
+    logger.debug(single_line)
+logger.debug('---------------------------------------------------------')
+
+urlparse(SLACK_INCOMING_WEBHOOK_URL)
+
+req = urllib.request.Request(SLACK_INCOMING_WEBHOOK_URL)
+req.add_header("Content-Type", "application/json")
+data = {
+    "username":   "Monit",
+    "color":      "#D00000",
+    "icon_emoji": ":warning:",
+    "fields":     [
+        {
+            "title": subject,
+            "value": body.replace('\t', '    ')
+        }
+    ]
+}
+logger.debug(data)
+try:
+    with urllib.request.urlopen(req, json.dumps(data).encode('utf-8')) as res:
+        logger.debug(res.read().decode("utf-8"))
+    logger.debug('HTTP Success')
+except Exception as e:
+    logger.debug(e)
+    raise e

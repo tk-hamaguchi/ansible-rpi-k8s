@@ -1,0 +1,108 @@
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_on +.*$'
+    replace: "wsrep_on                 = ON"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_cluster_name +.*$'
+    replace: "wsrep_cluster_name       = \"RPiCluster\""
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?binlog_format +.*$'
+    replace: "binlog_format            = row"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?default_storage_engine +.*$'
+    replace: "default_storage_engine   = InnoDB"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?innodb_autoinc_lock_mode +.*$'
+    replace: "innodb_autoinc_lock_mode = 2"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?bind-address +.*$'
+    replace: "bind-address = 0.0.0.0"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_slave_threads +.*$'
+    replace: "wsrep_slave_threads = 2"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_cluster_address +.*$'
+    replace: "wsrep_cluster_address    = {{ wsrepClusterAddress }}"
+
+- shell: grep wsrep_node_address /etc/mysql/mariadb.conf.d/60-galera.cnf
+  register: mariadb_grep_wsrep_node_address
+  failed_when: ( mariadb_grep_wsrep_node_address.rc not in [ 0, 1 ] ) 
+
+- shell: echo '' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_wsrep_node_address.rc == 1
+
+- shell: echo 'wsrep_node_address = {{ nodeIpAddress }}' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_wsrep_node_address.rc == 1
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_node_address +.*$'
+    replace: "wsrep_node_address = {{ nodeIpAddress }}"
+  when: mariadb_grep_wsrep_node_address.rc == 0
+
+- shell: grep wsrep_node_name /etc/mysql/mariadb.conf.d/60-galera.cnf
+  register: mariadb_grep_wsrep_node_name
+  failed_when: ( mariadb_grep_wsrep_node_name.rc not in [ 0, 1 ] ) 
+
+- shell: echo 'wsrep_node_name = {{ nodeHostName }}' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_wsrep_node_name.rc == 1
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_node_name +.*$'
+    replace: "wsrep_node_name = {{ nodeHostName }}"
+  when: mariadb_grep_wsrep_node_name.rc == 0
+
+- shell: grep innodb_locks_unsafe_for_binlog /etc/mysql/mariadb.conf.d/60-galera.cnf
+  register: mariadb_grep_innodb_locks_unsafe_for_binlog
+  failed_when: ( mariadb_grep_innodb_locks_unsafe_for_binlog.rc not in [ 0, 1 ] ) 
+
+- shell: echo 'innodb_locks_unsafe_for_binlog = 1' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_innodb_locks_unsafe_for_binlog.rc == 1
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?innodb_locks_unsafe_for_binlog +.*$'
+    replace: "innodb_locks_unsafe_for_binlog = 1"
+  when: mariadb_grep_innodb_locks_unsafe_for_binlog.rc == 0
+
+- shell: grep wsrep_sst_method /etc/mysql/mariadb.conf.d/60-galera.cnf
+  register: mariadb_grep_wsrep_sst_method
+  failed_when: ( mariadb_grep_wsrep_sst_method.rc not in [ 0, 1 ] ) 
+
+- shell: echo 'wsrep_sst_method = rsync' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_wsrep_sst_method.rc == 1
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_sst_method +.*$'
+    replace: "wsrep_sst_method = rsync"
+  when: mariadb_grep_wsrep_sst_method.rc == 0
+
+- shell: grep wsrep_provider /etc/mysql/mariadb.conf.d/60-galera.cnf
+  register: mariadb_grep_wsrep_provider
+  failed_when: ( mariadb_grep_wsrep_provider.rc not in [ 0, 1 ] ) 
+
+- shell: echo 'wsrep_provider = /usr/lib/libgalera_smm.so' >> /etc/mysql/mariadb.conf.d/60-galera.cnf
+  when: mariadb_grep_wsrep_provider.rc == 1
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+    regexp: '^#?wsrep_provider +.*$'
+    replace: "wsrep_provider = /usr/lib/libgalera_smm.so"
+  when: mariadb_grep_wsrep_provider.rc == 0
+

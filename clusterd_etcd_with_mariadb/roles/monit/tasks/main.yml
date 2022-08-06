@@ -1,0 +1,72 @@
+- apt:
+    name: monit
+
+- template:
+    src:  monit.conf.j2
+    dest: /etc/monit/conf.d/monit.conf
+
+- template:
+    src:  mail_forwarder.py.j2
+    dest: /usr/local/mail_forwarder.py 
+
+- template:
+    src:  monit.j2
+    dest: /etc/monit/conf-available/monit
+
+- template:
+    src:  prometheus-node-exporter.j2
+    dest: /etc/monit/conf-available/prometheus-node-exporter
+
+- file: 
+    src:  /etc/monit/conf-available/prometheus-node-exporter
+    dest: /etc/monit/conf-enabled/prometheus-node-exporter
+    state: link
+
+- file: 
+    src:  /etc/monit/conf-available/monit
+    dest: /etc/monit/conf-enabled/monit
+    state: link
+
+- file: 
+    src:  /etc/monit/conf-available/cron
+    dest: /etc/monit/conf-enabled/cron
+    state: link
+
+- file: 
+    src:  /etc/monit/conf-available/openssh-server
+    dest: /etc/monit/conf-enabled/openssh-server
+    state: link
+
+- copy:
+    src:  /etc/monit/conf-available/rsyslog
+    dest: /etc/monit/conf-enabled/rsyslog
+    remote_src: yes
+
+- replace:
+    path: /etc/monit/conf-enabled/rsyslog
+    regexp: '^ check process rsyslogd .*$'
+    replace: ' check process rsyslogd matching "rsyslog"'
+
+- name: Check /etc/aliases
+  shell: grep 'alert:' /etc/aliases
+  register: monit_alert_aliases
+  failed_when: ( monit_alert_aliases.rc not in [ 0, 1 ] ) 
+
+- name: Set mail forwarder script to /etc/aliases
+  shell: >
+    echo "alert: |\"/usr/bin/python3 /usr/local/mail_forwarder.py\"" >> /etc/aliases
+  when: monit_alert_aliases.rc == 1
+
+- name: Reset mail forwarder script to /etc/aliases
+  replace:
+    path: /etc/aliases
+    regexp: '^#?alert: +.*$'
+    replace: 'alert: |"/usr/bin/python3 /usr/local/mail_forwarder.py"'
+  when: monit_alert_aliases.rc == 0
+
+- name: Exec newaliases
+  shell: /usr/bin/newaliases
+
+- systemd:
+    state: restarted
+    name: monit

@@ -1,0 +1,43 @@
+- name: Check prometheus-node-exporter's conf-available file
+  stat:
+    path: /etc/monit/conf-available/prometheus-node-exporter
+  changed_when: false
+  register: prometheus_node_exporter_conf_available
+
+- name: Create temp file for config
+  copy:
+    src:  /etc/monit/conf-available/prometheus-node-exporter
+    dest: /tmp/prometheus-node-exporter_conf-available.tmp
+    remote_src: yes
+  changed_when: false
+  when: prometheus_node_exporter_conf_available.stat.exists
+
+- name: Generate monit config for prometheus-node-exporter
+  template:
+    src:  prometheus-node-exporter.j2
+    dest: /etc/monit/conf-available/prometheus-node-exporter
+
+- name: Create symbolic link to conf-enabled
+  file: 
+    src:  /etc/monit/conf-available/prometheus-node-exporter
+    dest: /etc/monit/conf-enabled/prometheus-node-exporter
+    state: link
+
+- name: Check diff for /etc/monit/conf-enabled/prometheus-node-exporter
+  shell: diff /tmp/prometheus-node-exporter_conf-available.tmp /etc/monit/conf-enabled/prometheus-node-exporter
+  register: prometheus_node_exporter_conf_available_diff
+  failed_when: ( prometheus_node_exporter_conf_available_diff.rc not in [ 0, 1 ] ) 
+  changed_when: false
+  when: prometheus_node_exporter_conf_available.stat.exists
+
+- name: Reload monit
+  shell: /usr/bin/monit reload
+  when: ( not prometheus_node_exporter_conf_available.stat.exists or prometheus_node_exporter_conf_available_diff.rc == 1 )
+
+- name: Remove temp file
+  file:
+    path: /tmp/prometheus-node-exporter_conf-available.tmp
+    state: absent
+    force: yes
+  changed_when: false
+  when: prometheus_node_exporter_conf_available.stat.exists

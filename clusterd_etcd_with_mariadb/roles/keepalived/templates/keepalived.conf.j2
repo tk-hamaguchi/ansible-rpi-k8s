@@ -1,0 +1,29 @@
+global_defs {
+  enable_script_security
+ }
+
+vrrp_script mysqlchk {
+     script "/etc/keepalived/mysqlchk.sh"
+     interval 2
+     weight 2
+     fall 2
+     rise 2
+ }
+
+vrrp_instance VI_1 {
+  state BACKUP
+  interface {{ vrrpInterface }}
+  virtual_router_id {{ vrrpRouterId }}
+  priority {{ vrrpPriority }} 
+  advert_int 1
+  virtual_ipaddress {
+    {{ vrrpIpAddress }}
+  }
+  unicast_src_ip {{ vrrpUnicastSrcIp }}
+  unicast_peer {
+      {{ vrrpUnicastSrcPeer }}
+  }
+  track_script {
+    mysqlchk
+  }
+}

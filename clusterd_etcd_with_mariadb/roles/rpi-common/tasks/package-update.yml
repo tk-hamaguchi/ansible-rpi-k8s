@@ -1,0 +1,9 @@
+- name: aptでパッケージをアップデート
+  apt:
+    upgrade: dist
+    update_cache: yes
+
+- name: rpi-updateでファームウェアをアップデート
+  shell: 'SKIP_WARNING=1 rpi-update'
+  when: enableRpiUpdate is defined
+

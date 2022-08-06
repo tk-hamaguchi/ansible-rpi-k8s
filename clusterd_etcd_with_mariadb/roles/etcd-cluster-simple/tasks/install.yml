@@ -1,0 +1,63 @@
+- name: etcdグループを作成する
+  group:
+    name: etcd
+
+- name: etcdユーザーを作成する
+  user:
+    name: etcd
+    shell: /sbin/nologin
+    groups: etcd
+    system: yes
+    create_home: no
+
+- name: etcdファイルチェック
+  stat:
+    path: /usr/local/src/etcd-{{ etcdVersion }}-linux-arm64.tar.gz
+  register: etcd_pkg
+
+- name: etcdをダウンロード
+  get_url:
+    url: https://github.com/etcd-io/etcd/releases/download/{{ etcdVersion }}/etcd-{{ etcdVersion }}-linux-arm64.tar.gz
+    dest: /usr/local/src/etcd-{{ etcdVersion }}-linux-arm64.tar.gz
+  when: etcd_pkg.stat.exists == False
+
+- name: etcdのインストール先ディレクトリチェック
+  stat:
+    path: /usr/local/etcd-{{ etcdVersion }}-linux-arm64
+  register: etcd_dir
+
+- name: etcdを解凍
+  unarchive:
+    src: /usr/local/src/etcd-{{ etcdVersion }}-linux-arm64.tar.gz
+    dest: /usr/local/
+  when: etcd_dir.stat.exists == False
+
+- name: Create symbolic link
+  file: 
+    src:  /usr/local/etcd-{{ etcdVersion }}-linux-arm64
+    dest: /usr/local/etcd
+    state: link
+
+- name: Create symbolic link
+  file: 
+    src:  /usr/local/etcd/etcd
+    dest: /usr/local/bin/etcd
+    state: link
+
+- name: Create symbolic link
+  file: 
+    src:  /usr/local/etcd/etcdctl
+    dest: /usr/local/bin/etcdctl
+    state: link
+
+- name: Create symbolic link
+  file: 
+    src:  /usr/local/etcd/etcdutl
+    dest: /usr/local/bin/etcdutl
+    state: link
+
+- file:
+    path: /var/lib/etcd
+    state: directory
+    owner: etcd
+    group: etcd

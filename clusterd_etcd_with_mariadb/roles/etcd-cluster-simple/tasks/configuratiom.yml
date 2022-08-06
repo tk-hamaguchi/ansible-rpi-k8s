@@ -1,0 +1,71 @@
+- name: etcdの設定ファイルチェック
+  stat:
+    path: /etc/etcd.conf.yml
+  register: etcd_conf
+
+- name: 設定ファイルをダウンロード
+  get_url:
+    url: https://raw.githubusercontent.com/etcd-io/etcd/{{ etcdVersion }}/etcd.conf.yml.sample
+    dest: /etc/etcd.conf.yml
+  when: etcd_conf.stat.exists == False
+
+- name: 設定ファイルをバックアップ
+  copy:
+    src: /etc/etcd.conf.yml
+    dest: /etc/etcd.conf.yml.default
+    remote_src: yes
+  when: etcd_conf.stat.exists == False
+
+- name: 設定ファイルをバックアップ2
+  copy:
+    src: /etc/etcd.conf.yml
+    dest: /etc/etcd.conf.yml.tmp
+    remote_src: yes
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^name:.*$'
+    replace: "name: '{{ nodeHostName }}'"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^data-dir:.*$'
+    replace: "data-dir: /var/lib/etcd"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^initial-advertise-peer-urls:.*$'
+    replace: "initial-advertise-peer-urls: http://{{ nodeIpAddress }}:2380"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^listen-peer-urls:.*$'
+    replace: "listen-peer-urls: http://{{ nodeIpAddress }}:2380"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^advertise-client-urls:.*$'
+    replace: "advertise-client-urls: http://{{ nodeIpAddress }}:2379"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^listen-client-urls:.*$'
+    replace: "listen-client-urls: http://{{ nodeIpAddress }}:2379"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^initial-cluster:.*$'
+    replace: "initial-cluster: '{{ etcdInitialCluster }}'"
+
+- replace:
+    path: /etc/etcd.conf.yml
+    regexp: '^initial-cluster-state:.*$'
+    replace: "initial-cluster-state: 'existing'"
+
+- shell: diff /etc/etcd.conf.yml /etc/etcd.conf.yml.tmp
+  register: etcd_conf_diff
+  failed_when: ( etcd_conf_diff.rc not in [ 0, 1 ] ) 
+
+- file:
+    path: /etc/etcd.conf.yml.tmp
+    state: absent

@@ -1,0 +1,13 @@
+- name: Check timezone
+  shell: cat /etc/timezone
+  changed_when: false
+  register: timezone
+
+- name: Set timezone
+  shell: 'timedatectl set-timezone Asia/Tokyo'
+  when: timezone.stdout != 'Asia/Tokyo'
+
+- name: Exec ntpdate
+  shell: ntpdate {{ ntpServer }}
+  changed_when: false
+  when: ntpServer is defined

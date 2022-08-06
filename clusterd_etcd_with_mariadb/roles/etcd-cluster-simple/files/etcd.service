@@ -1,0 +1,16 @@
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos/etcd
+After=network.target
+[Service]
+Type=notify
+Restart=always
+RestartSec=5s
+LimitNOFILE=40000
+TimeoutStartSec=0
+User=etcd
+Group=etcd
+Environment=
+ExecStart=/usr/local/bin/etcd --config-file /etc/etcd.conf.yml
+[Install]
+WantedBy=multi-user.target

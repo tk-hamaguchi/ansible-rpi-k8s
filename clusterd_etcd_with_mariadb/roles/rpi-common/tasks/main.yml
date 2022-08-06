@@ -1,0 +1,32 @@
+- include: sshd.yml
+- include: serial-port.yml
+- include: package-update.yml
+- include: swap.yml
+- include: rootfs.yml
+
+- name: 不要なサービスを停止する
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - avahi-daemon
+    - wpa_supplicant
+    - hciuart
+    - bluetooth
+    - alsa-restore
+    - alsa-state
+    - triggerhappy.socket
+
+- name: 設定を反映するために再起動
+  reboot:
+    reboot_timeout: 3600
+  when: enableInitReboot is defined
+
+
+- shell: systemctl --quiet set-default multi-user.target
+
+- file:
+    path: /etc/systemd/system/getty@tty1.service.d/autologin.conf
+    state: absent
+    force: yes

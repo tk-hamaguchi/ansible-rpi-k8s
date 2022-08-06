@@ -1,0 +1,11 @@
+- name: systemd にetcdを登録する
+  copy:
+    src:  etcd.service
+    dest: /etc/systemd/system/etcd.service
+
+- name: etcd を開始する
+  systemd:
+    daemon_reload: yes
+    name: etcd
+    state: stopped
+    enabled: no

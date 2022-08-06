@@ -1,0 +1,56 @@
+- name: mariadbファイルチェック
+  stat:
+    path: /usr/local/src/mariadb-{{ mariadbVersion }}-debian-bullseye-arm64-debs.tar
+  register: mariadb_pkg
+
+- name: mariadbをダウンロード
+  get_url:
+    url: https://dlm.mariadb.com/2307243/MariaDB/mariadb-{{ mariadbVersion }}/repo/debian/mariadb-{{ mariadbVersion }}-debian-bullseye-arm64-debs.tar
+    dest: /usr/local/src/mariadb-{{ mariadbVersion }}-debian-bullseye-arm64-debs.tar
+  when: mariadb_pkg.stat.exists == False
+
+- name: mariadbを解凍
+  unarchive:
+    src: /usr/local/src/mariadb-{{ mariadbVersion }}-debian-bullseye-arm64-debs.tar
+    dest: /usr/local/src/
+
+- stat:
+    path: /etc/apt/sources.list.d/mariadb.list
+  register: mariadb_source_list
+
+- shell:
+    cmd: './setup_repository'
+    chdir: /usr/local/src/mariadb-{{ mariadbVersion }}-debian-bullseye-arm64-debs
+  when: mariadb_source_list.stat.exists == False
+
+- apt:
+    update_cache: yes
+
+- apt:
+    name: mariadb-server
+
+- systemd:
+    daemon_reload: yes
+    name: mariadb
+    state: stopped
+    enabled: no
+
+- name: Check /etc/mysql/mariadb.conf.d/50-server.cnf 
+  stat:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+  changed_when: false
+  register: mariadb_server_cnf
+
+- include: server.cfg.yml
+  when: mariadb_server_cnf.stat.exists == True
+
+- name: Check /etc/mysql/mariadb.conf.d/60-galera.cnf
+  stat:
+    path: /etc/mysql/mariadb.conf.d/60-galera.cnf
+  changed_when: false
+  register: mariadb_galera_cnf
+
+- include: galera.cfg.yml
+  when: mariadb_galera_cnf.stat.exists == True
+
+- include: monit.yml

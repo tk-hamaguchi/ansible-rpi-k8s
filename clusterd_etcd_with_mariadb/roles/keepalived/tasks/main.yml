@@ -1,0 +1,60 @@
+- name: keepalived_scriptグループを作成する
+  group:
+    name: keepalived_script
+
+- name: keepalived_scriptユーザーを作成する
+  user:
+    name: keepalived_script
+    shell: /sbin/nologin
+    groups: keepalived_script
+    system: yes
+    create_home: no
+
+- name: keepalivedをインストールする
+  apt:
+    name: keepalived
+
+- name: keepalivedのサービスを停止する
+  systemd:
+    name: keepalived
+    state: stopped
+    enabled: no
+  when: (vrrpEnabled is not defined
+      or vrrpEnabled == false)
+
+- name: keepalived.confを作成する
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  when: (vrrpInterface is defined 
+     and vrrpRouterId is defined 
+     and vrrpPriority is defined 
+     and vrrpIpAddress is defined 
+     and vrrpUnicastSrcIp is defined 
+     and vrrpUnicastSrcPeer is defined 
+     and vrrpEnabled is defined)
+
+- name: mysqlchk.shを作成する
+  template:
+    src: mysqlchk.sh.j2
+    dest: /etc/keepalived/mysqlchk.sh
+    mode: '0755'
+    owner: keepalived_script
+    group: keepalived_script
+  when: (vrrpInterface is defined 
+     and vrrpRouterId is defined 
+     and vrrpPriority is defined 
+     and vrrpIpAddress is defined 
+     and vrrpUnicastSrcIp is defined 
+     and vrrpUnicastSrcPeer is defined 
+     and vrrpEnabled is defined)
+
+- name: keepalivedのサービスを開始する
+  systemd:
+    name: keepalived
+    state: started
+    enabled: yes
+  when: (vrrpEnabled is defined
+     and vrrpEnabled == true)
+
+- include: monit.yml

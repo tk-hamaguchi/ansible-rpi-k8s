@@ -1,0 +1,46 @@
+- hosts: localhost
+  # gather_facts: true
+  gather_facts: false
+  vars:
+    # enableInitReboot: true
+    # enableRpiUpdate: true
+    ipAddress: "192.168.250.101/24"
+    gateway: "192.168.250.1"
+    dns: "192.168.250.1"
+    authorized_keys_file: "/mnt/authorized_keys_file"
+    nodeHostName: "rpi3b-ds-1"
+    nodeIpAddress: "192.168.250.101"
+
+  become: yes
+  roles:
+    - role: common
+      vars:
+        ntpServer: "192.168.250.3"
+    - role: rpi-common
+    - role: monit
+      vars:
+        slackIncomingWebhookUrl: SLACK_INCOMING_WEBHOOK_URL
+    - role: prometheus-node-exporter
+    - role: etcd-cluster-simple
+      vars:
+        etcdVersion:        "v3.5.4"
+        etcdInitialCluster: "rpi3b-ds-1=http://192.168.250.101:2380,rpi3b-ds-2=http://192.168.250.102:2380,rpi3b-ds-3=http://192.168.250.103:2380"
+    - role: mariadb-cluster
+      vars:
+        mariadbVersion: "10.8.3"
+        wsrepClusterAddress: "gcomm://"
+    - role: keepalived
+      vars:
+        vrrpInterface:      "eth0"
+        vrrpRouterId:       100
+        vrrpPriority:       101
+        vrrpIpAddress:      "192.168.250.100/24"
+        vrrpUnicastSrcIp:   "192.168.250.101"
+        vrrpUnicastSrcPeer: "192.168.250.102"
+        #vrrpEnabled:       true 
+        vrrpEnabled:        false 
+
+  # tasks:
+  #   - name: print ansible_host
+  #     debug:
+  #       var: ansible_facts

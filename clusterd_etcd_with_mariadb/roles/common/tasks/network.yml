@@ -1,0 +1,21 @@
+- name: Check config in /etc/dhcpcd.conf
+  shell: grep -i '^interface' /etc/dhcpcd.conf
+  register: grep_dhcpcd_configured
+  changed_when: false
+  failed_when: grep_dhcpcd_configured.rc not in [0, 1]
+
+- name: Append static_eth0 config to /etc/dhcpcd.conf
+  blockinfile:
+    path: /etc/dhcpcd.conf
+    block: |
+      profile static_eth0
+      static ip_address={{ ipAddress }}
+      static routers={{ gateway }}
+      static domain_name_servers={{ dns }}
+  when: grep_dhcpcd_configured.rc == 1
+
+- name: Restart service dhcpcd
+  service:
+    name: dhcpcd
+    state: restarted
+  when: grep_dhcpcd_configured.rc == 1

@@ -1,0 +1,73 @@
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#user +.*$'
+    replace: "user                    = mysql"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#datadir +.*$'
+    replace: "datadir                 = /var/lib/mysql"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?bind-address +.*$'
+    replace: "bind-address            = 0.0.0.0"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#skip-name-resolve$'
+    replace: "skip-name-resolve"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?general_log_file +.*$'
+    replace: "general_log_file       = /var/log/mysql/mysql.log"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?general_log +.*$'
+    replace: "general_log            = 1"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?log_error +.*$'
+    replace: "log_error = /var/log/mysql/error.log"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?slow_query_log_file +.*$'
+    replace: "slow_query_log_file    = /var/log/mysql/mariadb-slow.log"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?long_query_time +.*$'
+    replace: "long_query_time        = 10"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?log_slow_verbosity +.*$'
+    replace: "log_slow_verbosity     = query_plan,explain"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#?log_slow_verbosity +.*$'
+    replace: "log_slow_verbosity     = query_plan,explain"
+
+- replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf 
+    regexp: '^#log-queries-not-using-indexes$'
+    replace: "log-queries-not-using-indexes"
+
+- name: Check innodb config in /etc/mysql/mariadb.conf.d/50-server.cnf
+  shell: grep -i '^innodb_buffer_pool_size' /etc/mysql/mariadb.conf.d/50-server.cnf 
+  register: grep_innodb_configured
+  changed_when: false
+  failed_when: grep_innodb_configured.rc not in [0, 1]
+
+- name: Append innodb config
+  replace:
+    path: /etc/mysql/mariadb.conf.d/50-server.cnf
+    regexp: '^#(innodb_buffer_pool_size = .+)$'
+    replace: 'innodb_buffer_pool_size = 512M\ninnodb_file_per_table = 1\ninnodb_file_format = Barracuda\ninnodb_large_prefix = 1\ninnodb_flush_log_at_trx_commit = 2\ninnodb_log_buffer_size = 16M'
+  when: grep_innodb_configured.rc == 1
+

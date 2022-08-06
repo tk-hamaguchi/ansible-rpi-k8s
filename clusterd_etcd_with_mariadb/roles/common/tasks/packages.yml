@@ -1,0 +1,28 @@
+- apt:
+    update_cache: yes
+
+- name: Install packages
+  apt:
+    name: "{{ packages }}"
+  vars:
+    packages:
+    - vim
+    - git
+    - ntpdate
+    - fonts-ricty-diminished
+    - tree
+    - lvm2
+
+- name: Install packages
+  apt:
+    name: postfix
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: postfix を開始する
+  systemd:
+    daemon_reload: yes
+    name: postfix
+    state: started
+    enabled: yes
+

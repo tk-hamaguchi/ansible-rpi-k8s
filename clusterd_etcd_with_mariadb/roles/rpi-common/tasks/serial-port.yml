@@ -1,0 +1,11 @@
+- name: シリアル接続を有効にする (1/2)
+  replace:
+    path: /boot/cmdline.txt
+    regexp: '^(.+) console=[^\s]+ console=[^\s]+ (.+)$'
+    replace: '\1 console=tty1 console=serial0,115200 \2'
+
+- name: シリアル接続を有効にする (2/2)
+  replace:
+    path: /boot/config.txt
+    regexp: '^#(dtoverlay)=.+$'
+    replace: '\1=pi3-miniuart-bt'

@@ -1,0 +1,7 @@
+- name: SWAP領域を無効化(1/2)
+  shell: 'swapoff --all'
+
+- name: SWAP領域を無効化(2/2)
+  apt:
+    name: dphys-swapfile
+    state: absent
